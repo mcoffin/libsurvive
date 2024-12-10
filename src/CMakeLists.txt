@@ -4,6 +4,8 @@ if(BUILD_STATIC)
   add_definitions(-DSURVIVE_DISABLE_PLUGINS)
 endif()
 
+find_package(PkgConfig)
+
 list (APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 check_symbol_exists (fopencookie stdio.h HAVE_FOPENCOOKIE)
 
@@ -53,11 +55,12 @@ SET(SURVIVE_SRCS ${SURVIVE_SRCS}
 )
 
 if(USE_HIDAPI)
-  add_definitions (-DHIDAPI)
   IF(WIN32)
+	add_definitions (-DHIDAPI)
     SET(SURVIVE_SRCS ${SURVIVE_SRCS} ../redist/hid-windows.c)
   else()
-    list(APPEND ADDITIONAL_LIBRARIES udev hidapi-libusb)
+	pkg_check_modules(HIDAPI REQUIRED hidapi-libusb)
+	# list(APPEND ADDITIONAL_LIBRARIES udev hidapi-libusb)
   endif()
 endif()
 
@@ -86,6 +89,12 @@ set_target_properties(survive PROPERTIES
 	VERSION ${PROJECT_VERSION})
 set_target_properties(survive PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set_target_properties(survive PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+if(USE_HIDAPI AND NOT WIN32)
+	target_compile_definitions(survive PUBLIC HIDAPI)
+	target_link_libraries(survive ${HIDAPI_LIBRARIES})
+	include_directories(${HIDAPI_INCLUDE_DIRS})
+endif()
 
 if(WIN32)
     set_target_properties(survive PROPERTIES PREFIX "lib")
